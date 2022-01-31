@@ -8,20 +8,18 @@
  *--------------------------------------------------------------------------------------------*/
 
 import * as assert from 'assert';
-import * as fs from 'fs';
-import * as url from 'url';
-import * as path from 'path';
-import { getLanguageService, JSONSchema, SchemaRequestService, TextDocument, MatchingSchema } from 'vscode-json-languageservice';
-import { DiagnosticSeverity, SchemaConfiguration } from 'vscode-json-languageservice';
-import axios from 'axios';
 
+import { getLanguageService, TextDocument } from 'vscode-json-languageservice';
 
-// import { as3ExampleDec } from '../src/bigip/as3Models';
-import { atcMetaData, as3ExampleDec, injectSchema } from 'f5-conx-core';
+import { injectSchema } from 'f5-conx-core';
 
-// let as3Schema;
+import { as3ExampleDec, deviceExampleDec, doExampleDec, tsExampleDec, cfExampleDec} from '../src/models/examples'
 
-import as3Schema from '../as3Schema.json'
+import as3Schema from '../schemas/as3Schema.json';
+import deviceSchema from '../schemas/deviceSchema.json';
+import doSchema from '../schemas/doSchema.json';
+import tsSchema from '../schemas/tsSchema.json';
+import cfSchema from '../schemas/cfSchema.json';
 
 const as3SchemaURL = "https://raw.githubusercontent.com/F5Networks/f5-appsvcs-extension/master/schema/latest/as3-schema.json";
 
@@ -40,9 +38,13 @@ async function validate(dec: unknown, schema: string) {
     const jsonLanguageService = getLanguageService({
         schemaRequestService: (uri) => {
             if (uri === "f5://server/f5.schema.json") {
-                return Promise.resolve(schema);
+                // this happens when no $schema reference in the json
+            } else {
+                // if there is a $schema reference in the json, it will be the uri
+                // so we could add logic here to try to get it over the internet or try local cache first
             }
-            return Promise.reject(`Unabled to load schema at ${uri}`);
+            return Promise.resolve(schema);
+            // return Promise.reject(`Unabled to load schema at ${uri}`);
         }
     });
     // associate `*.data.json` with the `foo://server/f5.schema.json` schema
@@ -59,27 +61,59 @@ async function validate(dec: unknown, schema: string) {
 describe('JSON Schema', function () {
 
     this.beforeEach( function () {
-        delete as3['$schema']
+        // remote the schema reference in each of the examples so we can see how it works with/without it since this validator will want to fullfill it's reference
+        delete as3ExampleDec['$schema']
     })
 
     it('good as3 dec', async function () {
-        // delete as3['$schema']
-        const results = await validate(as3, JSON.stringify(as3Schema, undefined, 4))
+        const results = await validate(as3ExampleDec, JSON.stringify(as3Schema))
         assert.ok(results.length === 0)
     });
 
 
     it('bad as3 dec', async function () {
-        const results = await validate(as3_bad, JSON.stringify(as3Schema, undefined, 4))
+        const results = await validate({
+            "class": "AS3",
+            "action": "ded",
+            "persist": true,
+        }, JSON.stringify(as3Schema))
         assert.ok(results.length > 0)
     });
 
     it('good as3 dec w/injected schema reference', async function () {
+        const as3_wS = await injectSchema(as3ExampleDec)
+        const results = await validate(as3_wS, JSON.stringify(as3Schema))
+        assert.ok(results.length === 0)
+    });
 
-        // delete as3['$schema']
 
-        const as3_wS = await injectSchema(as3)
-        const results = await validate(as3, JSON.stringify(as3Schema, undefined, 4))
+    it('good as3 dec w/injected schema reference - no manual schema', async function () {
+        const as3_wS = await injectSchema(as3ExampleDec)
+        // if we don't supply a schema, we get the following error
+        //  ['[line 1] Unable to load schema from 'https://raw.…ster/schema/latest/as3-schema.json': No content.']
+        const results = await validate(as3_wS, '')
+        assert.ok(results.length > 0)
+    });
+
+
+
+    it('good device dec', async function () {
+        const results = await validate(deviceExampleDec, JSON.stringify(deviceSchema))
+        assert.ok(results.length === 0)
+    });
+
+    it('good do dec', async function () {
+        const results = await validate(doExampleDec, JSON.stringify(doSchema))
+        assert.ok(results.length === 0)
+    });
+
+    it('good ts dec', async function () {
+        const results = await validate(tsExampleDec, JSON.stringify(tsSchema, undefined, 4))
+        assert.ok(results.length === 0)
+    });
+
+    it('good cf dec', async function () {
+        const results = await validate(cfExampleDec, JSON.stringify(cfSchema, undefined, 4))
         assert.ok(results.length === 0)
     });
 });
@@ -91,48 +125,3 @@ const as3_bad =
     "action": "ded",
     "persist": true,
 }
-
-const as3 =
-{
-    "$schema": "https://raw.githubusercontent.com/F5Networks/f5-appsvcs-extension/master/schema/latest/as3-schema.json",
-    "class": "AS3",
-    "action": "deploy",
-    "persist": true,
-    "declaration": {
-        "class": "ADC",
-        "schemaVersion": "3.0.0",
-        "id": "urn:uuid:33045210-3ab8-4636-9b2a-c98d22ab915d",
-        "label": "Sample 1",
-        "remark": "Simple HTTP application with RR pool",
-        "Sample_01": {
-            "class": "Tenant",
-            "A1": {
-                "class": "Application",
-                "template": "http",
-                "serviceMain": {
-                    "class": "Service_HTTP",
-                    "virtualAddresses": [
-                        "10.0.1.10"
-                    ],
-                    "pool": "web_pool"
-                },
-                "web_pool": {
-                    "class": "Pool",
-                    "monitors": [
-                        "http"
-                    ],
-                    "members": [
-                        {
-                            "servicePort": 80,
-                            "serverAddresses": [
-                                "192.0.1.10",
-                                "192.0.1.11"
-                            ]
-                        }
-                    ]
-                }
-            }
-        }
-    }
-}
-//   )
