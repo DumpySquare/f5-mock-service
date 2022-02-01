@@ -31,8 +31,7 @@
     "koa-body": "^4.2.0",
     "koa-json": "^2.0.2",
     "koa-logger": "^3.2.1",
-    "koa-router": "^10.1.1",
-    "vscode-json-languageservice": "^4.2.0"
+    "koa-router": "^10.1.1"
   },
   "devDependencies": {
     "@types/assert": "^1.5.4",
