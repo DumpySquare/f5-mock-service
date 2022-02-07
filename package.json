@@ -26,7 +26,7 @@
   "dependencies": {
     "axios": "^0.25.0",
     "deepmerge": "^4.2.2",
-    "f5-conx-core": "^0.12.4",
+    "f5-conx-core": "file:../f5-conx-core",
     "koa": "^2.13.4",
     "koa-body": "^4.2.0",
     "koa-json": "^2.0.2",
