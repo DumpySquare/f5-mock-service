@@ -11,9 +11,6 @@ import json from 'koa-json';
 
 import Logger from 'f5-conx-core/dist/logger';
 
-import { baseRoutes } from './routes/baseRoutes';
-import { tmosRoutes } from './routes/tmosRoutes';
-import { as3Routes } from './routes/as3Routes';
 
 const port = 8843;
 const appName = 'F5-CONX-CORE-MOCKING-SERVICE'
@@ -21,11 +18,15 @@ const app = new Koa();
 
 export const log = new Logger(appName);
 
+import { baseRoutes } from './routes/baseRoutes';
+import { tmosRoutes } from './routes/tmosRoutes';
+import { as3Routes } from './routes/as3Routes';
+
 // middlewares
 app.use(
     json({
-        pretty: false,
-        param: 'pretty'
+        pretty: true,
+        spaces: 2
     })
 );
 
